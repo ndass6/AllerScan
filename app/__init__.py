@@ -81,7 +81,7 @@ def process_upc():
     food_allergens[i] = food_allergens[i][0].encode('utf-8').lower()
   print food_allergens
 
-  is_allergic = not set(user_allergens).isdisjoint(food_allergens)
+  is_allergic = str(not set(user_allergens).isdisjoint(food_allergens))
 
 
   # # Train the recommender
@@ -116,13 +116,13 @@ def process_upc():
   percent_reaction = "%0.2f" % (min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.9219) * 100)
 
   if is_allergic:
-    percent_reaction = 100
+    percent_reaction = 100.00
 
-  return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
-    user_names=user_names, reactions=reactions, similar_users=similar_users)
+  # return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
+  #   user_names=user_names, reactions=reactions, similar_users=similar_users)
 
-  # return render_template('upc.html', food_name=food_name, user_names=user_names, reactions=reactions,
-  #   similar_users=similar_users, percent_reaction=percent_reaction)
+  return render_template('upc.html', food_name=food_name, user_names=user_names, percent_reaction=percent_reaction,
+    reactions=reactions, similar_users=similar_users, is_allergic=is_allergic)
 
 def create_user_vector(user_id, debug=False):
   getCursor().execute("SELECT `name`, `severity` FROM `allergies` WHERE `user_id`=%s", [user_id])
