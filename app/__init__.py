@@ -7,10 +7,10 @@ import numpy as np
 app = Flask(__name__)
 
 mysql = MySQL()
-app.config['MYSQL_DATABASE_USER'] = 'sql3185369'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'X6qaMSPe7I'
-app.config['MYSQL_DATABASE_DB'] = 'sql3185369'
-app.config['MYSQL_DATABASE_HOST'] = 'sql3.freemysqlhosting.net'
+app.config['MYSQL_DATABASE_USER'] = 'ndass1'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'database'
+app.config['MYSQL_DATABASE_DB'] = 'ndass1$default'
+app.config['MYSQL_DATABASE_HOST'] = 'ndass1.mysql.pythonanywhere-services.com'
 mysql.init_app(app)
 
 def getDB():
@@ -56,25 +56,25 @@ def process_upc():
   user_ids, reactions = zip(*getCursor().fetchall())
 
   # Retreive recommender info
-  user_vector = create_user_vector(user_id, True)
-  getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms`")
-  food_ids, user_ids, reactions = zip(*getCursor().fetchall())
-  product_users = {}
-  product_reactions = {}
-  for pos, food_id in enumerate(food_ids):
-    if food_id not in product_users:
-      product_users[food_id] = []
-      product_reactions[food_id] = []
-    product_users[food_id].append(create_user_vector(user_ids[pos]))
-    product_reactions[food_id].append([1, 0] if reactions[pos] == "None" else [0, 1])
-    print "%d/%d" % (pos, len(food_ids))
+  # user_vector = create_user_vector(user_id, True)
+  # getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms`")
+  # food_ids, user_ids, reactions = zip(*getCursor().fetchall())
+  # product_users = {}
+  # product_reactions = {}
+  # for pos, food_id in enumerate(food_ids):
+  #   if food_id not in product_users:
+  #     product_users[food_id] = []
+  #     product_reactions[food_id] = []
+  #   product_users[food_id].append(create_user_vector(user_ids[pos]))
+  #   product_reactions[food_id].append([1, 0] if reactions[pos] == "None" else [0, 1])
+  #   print "%d/%d" % (pos, len(food_ids))
 
-  recommender = Recommender()
-  recommender.train(product_users, product_reactions, food_id)
-  nearest = recommender.get_similar_users(user_vector)
-  similar_users = [user_ids[near] for near in nearest]
-  percent_reaction = recommender.predict_reaction(user_vector)
-  print percent_reaction, similar_users, user_vector
+  # recommender = Recommender()
+  # recommender.train(product_users, product_reactions, food_id)
+  # nearest = recommender.get_similar_users(user_vector)
+  # similar_users = [user_ids[near] for near in nearest]
+  # percent_reaction = recommender.predict_reaction(user_vector)
+  # print percent_reaction, similar_users, user_vector
 
   if hasattr(g, 'mysql_db'):
     g.mysql_db.close()
