@@ -53,8 +53,8 @@ def process_upc():
   user_id = request.values.get('user_id')
 
   # Retrieve food info
-  getCursor().execute("SELECT `food_id`, `name`, `percent_react` FROM `food` WHERE `upc`=%s", [upc])
-  food_id, food_name, percent_react = getCursor().fetchone()
+  getCursor().execute("SELECT `food_id`, `name` FROM `food` WHERE `upc`=%s", [upc])
+  food_id, food_name = getCursor().fetchone()
 
   # Retrieve user symptom info for people that had a reaction
   getCursor().execute("SELECT `user_id`, `reaction` FROM `food_symptoms` WHERE `food_id`=%s", [food_id])
@@ -62,7 +62,7 @@ def process_upc():
   reactions = dict(Counter(raw_reactions))
   total = float(sum(reactions.values()))
   for key, value in reactions.items():
-    reactions[key] = float(value) / total
+    reactions[key] = float("%.2f" % (float(value) / total))
   print reactions, sum(reactions.values())
 
 
@@ -95,9 +95,9 @@ def process_upc():
 
   user_names = [names.get_full_name() for _ in user_ids]
   similar_users = random.sample(user_names, 5)
-  percent_reaction = min(sum(create_user_vector(user_id)) / 5 + random.random() / 10, 0.9) * 100.0 / 100.0
+  percent_reaction = "%0.2f" % min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.92)
 
-  return jsonify(food_name=food_name, percent_react=percent_react, user_names=user_names, reactions=reactions,
+  return render_template('upc.html', food_name=food_name, user_names=user_names, reactions=reactions,
     similar_users=similar_users, percent_reaction=percent_reaction)
 
 def create_user_vector(user_id, debug=False):
