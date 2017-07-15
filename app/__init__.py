@@ -15,6 +15,8 @@ app.config['MYSQL_DATABASE_DB'] = 'sql3185369'
 app.config['MYSQL_DATABASE_HOST'] = 'sql3.freemysqlhosting.net'
 mysql.init_app(app)
 
+counter = 0
+
 def getDB():
   """Opens a new database connection if there is none yet for the
   current application context.
@@ -44,8 +46,10 @@ def hello_world():
   return redirect('/camera_upload')
 
 @app.route('/camera_upload')
-def test():
-  return render_template('camera_upload.html')
+def camera_upload():
+  if counter == 0:
+    num = 602652170089
+  return render_template('camera_upload.html', num=num)
 
 @app.route('/upc', methods=['GET', 'POST'])
 def process_upc():
@@ -63,7 +67,23 @@ def process_upc():
   total = float(sum(reactions.values()))
   for key, value in reactions.items():
     reactions[key] = float("%.2f" % (float(value) / total))
-  print reactions, sum(reactions.values())
+
+  # Retrieve ingredients to check if the user is allergic to this food item
+  getCursor().execute("SELECT `name` FROM `allergies` WHERE `user_id`=%s", [user_id])
+  user_allergens = list(getCursor().fetchall())
+  for i in range(len(user_allergens)):
+    user_allergens[i] = user_allergens[i][0].encode('utf-8').lower()
+  print user_allergens
+
+  getCursor().execute("SELECT `name` FROM `ingredients` WHERE `food_id`=%s", [food_id])
+  food_allergens = list(getCursor().fetchall())
+  for i in range(len(food_allergens)):
+    food_allergens[i] = food_allergens[i][0].encode('utf-8').lower()
+  print food_allergens
+
+  is_allergic = not set(user_allergens).isdisjoint(food_allergens)
+  if is_allergic:
+    percent_reaction = 1
 
 
   # # Train the recommender
@@ -97,8 +117,11 @@ def process_upc():
   similar_users = random.sample(user_names, 5)
   percent_reaction = "%0.2f" % min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.92)
 
-  return render_template('upc.html', food_name=food_name, user_names=user_names, reactions=reactions,
-    similar_users=similar_users, percent_reaction=percent_reaction)
+  return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
+    user_names=user_names, reactions=reactions, similar_users=similar_users)
+
+  # return render_template('upc.html', food_name=food_name, user_names=user_names, reactions=reactions,
+  #   similar_users=similar_users, percent_reaction=percent_reaction)
 
 def create_user_vector(user_id, debug=False):
   getCursor().execute("SELECT `name`, `severity` FROM `allergies` WHERE `user_id`=%s", [user_id])
