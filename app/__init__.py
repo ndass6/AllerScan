@@ -42,7 +42,7 @@ def closeDB(error):
     g.mysql_db.close()
 
 @app.route('/')
-def hello_world():
+def main():
   return redirect('/camera_upload')
 
 @app.route('/camera_upload')
@@ -66,7 +66,7 @@ def process_upc():
   reactions = dict(Counter(raw_reactions))
   total = float(sum(reactions.values()))
   for key, value in reactions.items():
-    reactions[key] = float("%.2f" % (float(value) / total))
+    reactions[key] = float("%.2f" % (float(value) / total * 100))
 
   # Retrieve ingredients to check if the user is allergic to this food item
   getCursor().execute("SELECT `name` FROM `allergies` WHERE `user_id`=%s", [user_id])
@@ -82,8 +82,6 @@ def process_upc():
   print food_allergens
 
   is_allergic = not set(user_allergens).isdisjoint(food_allergens)
-  if is_allergic:
-    percent_reaction = 1
 
 
   # # Train the recommender
@@ -115,7 +113,10 @@ def process_upc():
 
   user_names = [names.get_full_name() for _ in user_ids]
   similar_users = random.sample(user_names, 5)
-  percent_reaction = "%0.2f" % min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.92)
+  percent_reaction = "%0.2f" % (min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.9219) * 100)
+
+  if is_allergic:
+    percent_reaction = 100
 
   return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
     user_names=user_names, reactions=reactions, similar_users=similar_users)
