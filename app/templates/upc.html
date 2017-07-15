@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>AllerScan</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Theme CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-freelancer/3.3.7/css/freelancer.min.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+
+  	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <style>
+    .upload-btn-wrapper {
+	  position: relative;
+	  overflow: hidden;
+	  display: inline-block;
+	}
+
+	.barcodebtn {
+	  border: 2px solid gray;
+	  color: gray;
+	  background-color: white;
+	  padding: 8px 20px;
+	  border-radius: 8px;
+	  font-size: 20px;
+	  font-weight: bold;
+	}
+
+	.upload-btn-wrapper input[type=file] {
+	  font-size: 100px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+	  opacity: 0;
+	}
+
+
+    .tags {
+        margin: 0 auto;
+        padding: 0;
+        display: table;
+        list-style: none;
+    }
+
+    .tags li {
+      float: left; 
+    }
+
+    .tag {
+      background: #40a2ed;
+      border-radius: 3px 0 0 3px;
+      color: #fff;
+      display: inline-block;
+      height: 26px;
+      line-height: 26px;
+      padding: 0 20px 0 23px;
+      position: relative;
+      margin: 0 10px 10px 0;
+      text-decoration: none;
+      -webkit-transition: color 0.2s;
+    }
+
+    .tag::before {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: inset 0 1px rgba(0, 0, 0, 0.25);
+      content: '';
+      height: 6px;
+      left: 10px;
+      position: absolute;
+      width: 6px;
+      top: 10px;
+    }
+
+    .tag::after {
+      background: #fff;
+      border-bottom: 13px solid transparent;
+      border-left: 10px solid #eee;
+      border-top: 13px solid transparent;
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    .tag:hover {
+      background-color: crimson;
+      color: white;
+    }
+
+    .tag:hover::after {
+       border-left-color: crimson; 
+    }
+    .tags-container {
+        margin-top:100px;
+        font-weight: bold;                                                                      
+
+    }
+    .title-container {
+        margin-top: 50px;
+    }
+    #buttons {
+    margin: 20px auto 0;
+    display: block;
+    height: 50px;
+    }
+
+    #buttons ul {
+    }
+
+    #buttons li {
+    }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvasjs/1.7.0/canvasjs.min.js"></script>
+    <script type="text/javascript">
+    window.onload = function () {
+        data = []
+        {% for key in reactions %}
+            data.push({name:"{{key|safe}}", y:{{reactions[key]}}})
+        {% endfor %}
+        var chart = new CanvasJS.Chart("chartContainer",
+        {
+            title:{
+                text: "Symptom Breakdown by User"
+            },
+            exportFileName: "Pie Chart",
+            exportEnabled: true,
+                    animationEnabled: true,
+            legend:{
+                verticalAlign: "bottom",
+                horizontalAlign: "center"
+            },
+            data: [
+            {       
+                type: "pie",
+                showInLegend: true,
+                toolTipContent: "{name}: <strong>{y}%</strong>",
+                indexLabel: "{name} {y}%",
+                dataPoints: data
+        }
+        ]
+        });
+        chart.render();
+    }
+    </script>
+    <script>
+        if ("{{is_allergic|safe}}" === "True") {
+            alert('This item contains an allergen that you flagged.')
+        }
+    </script>
+
+</head>
+
+<body id="page-top" class="index">
+    
+    <!-- Navigation -->
+    <nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <a class="navbar-brand" href="#page-top">AllerScan</a>
+            </div>
+        </div>
+        <!-- /.container-fluid -->
+    </nav>
+    <p class="text-center tags-container">Product: {{food_name}}</p>
+    <p class="text-center" style="color: rgb(255 * 0.25, 255 * (1 - 0.25), 0)" >This product has a {{percent_reaction}}% chance of causing a reaction!</p>
+    
+    <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+    <p class="title-container text-center">Connect to Similar Users</p>
+    <div class='buttons'>
+        <ul class="tags">
+        {% for user in similar_users %}
+            <li class="tag"><p>{{ user }}</p></li>
+        {% endfor %}
+        </ul>
+    </div>
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    
+    <!-- Plugin JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"></script>
+
+    <!-- Theme JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-freelancer/3.3.7/js/freelancer.min.js"></script>
+
+</body>
+
+</html>

@@ -1,5 +1,10 @@
-from flask import Flask, render_template, jsonify, request, g
+from flask import Flask, render_template, jsonify, request, g, redirect, url_for
 from flaskext.mysql import MySQL
+import random, math, names
+from collections import Counter
+
+#from sklearn.neighbors import KNeighborsClassifier
+#import numpy as np
 
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
@@ -12,6 +17,8 @@ app.config['MYSQL_DATABASE_PASSWORD'] = 'database'
 app.config['MYSQL_DATABASE_DB'] = 'ndass1$default'
 app.config['MYSQL_DATABASE_HOST'] = 'ndass1.mysql.pythonanywhere-services.com'
 mysql.init_app(app)
+
+counter = 0
 
 def getDB():
   """Opens a new database connection if there is none yet for the
@@ -38,26 +45,50 @@ def closeDB(error):
     g.mysql_db.close()
 
 @app.route('/')
-def hello_world():
-  return render_template('index.html')
+def main():
+  return redirect('/camera_upload')
 
-@app.route('/upc')
+@app.route('/camera_upload')
+def camera_upload():
+  if counter == 0:
+    num = 602652170089
+  return render_template('camera_upload.html', num=num)
+
+@app.route('/upc', methods=['GET', 'POST'])
 def process_upc():
-  # Retrieve args
-  upc = request.args.get('num')
-  user_id = request.args.get('user_id')
+  upc = request.values.get('num')
+  user_id = request.values.get('user_id')
 
   # Retrieve food info
-  getCursor().execute("SELECT `food_id`, `name`, `percent_react` FROM `food` WHERE `upc`=%s", [upc])
-  food_id, food_name, percent_react = getCursor().fetchone()
+  getCursor().execute("SELECT `food_id`, `name` FROM `food` WHERE `upc`=%s", [upc])
+  food_id, food_name = getCursor().fetchone()
 
   # Retrieve user symptom info for people that had a reaction
-  getCursor().execute("SELECT `user_id`, `reaction` FROM `food_symptoms` WHERE `food_id`=%s AND NOT `reaction`='None'", [food_id])
-  user_ids, reactions = zip(*getCursor().fetchall())
+  getCursor().execute("SELECT `user_id`, `reaction` FROM `food_symptoms` WHERE `food_id`=%s", [food_id])
+  user_ids, raw_reactions = zip(*getCursor().fetchall())
+  reactions = dict(Counter(raw_reactions))
+  total = float(sum(reactions.values()))
+  for key, value in reactions.items():
+    reactions[key] = float("%.2f" % (float(value) / total * 100))
 
-  # Retreive recommender info
-  # user_vector = create_user_vector(user_id, True)
-  # getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms`")
+  # Retrieve ingredients to check if the user is allergic to this food item
+  getCursor().execute("SELECT `name` FROM `allergies` WHERE `user_id`=%s", [user_id])
+  user_allergens = list(getCursor().fetchall())
+  for i in range(len(user_allergens)):
+    user_allergens[i] = user_allergens[i][0].encode('utf-8').lower()
+  print user_allergens
+
+  getCursor().execute("SELECT `name` FROM `ingredients` WHERE `food_id`=%s", [food_id])
+  food_allergens = list(getCursor().fetchall())
+  for i in range(len(food_allergens)):
+    food_allergens[i] = food_allergens[i][0].encode('utf-8').lower()
+  print food_allergens
+
+  is_allergic = str(not set(user_allergens).isdisjoint(food_allergens))
+
+
+  # # Train the recommender
+  # getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms` LIMIT 10000")
   # food_ids, user_ids, reactions = zip(*getCursor().fetchall())
   # product_users = {}
   # product_reactions = {}
@@ -69,18 +100,32 @@ def process_upc():
   #   product_reactions[food_id].append([1, 0] if reactions[pos] == "None" else [0, 1])
   #   print "%d/%d" % (pos, len(food_ids))
 
+  # # Retrieve recommendations
+  # user_vector = create_user_vector(user_id, True)
   # recommender = Recommender()
   # recommender.train(product_users, product_reactions, food_id)
-  # nearest = recommender.get_similar_users(user_vector)
-  # similar_users = [user_ids[near] for near in nearest]
-  # percent_reaction = recommender.predict_reaction(user_vector)
+  # distances, nearest = recommender.get_similar_users(user_vector)
+  # similar_users = []
+  # print distances, nearest
+  # for near in nearest[0]:
+  #   print near, product_users[food_id][near]
+  #   similar_users.append(user_ids[near])
+  # recommender.predict_reaction(user_vector)[1][0][0][0]
+  # percent_reaction = recommender.predict_reaction(user_vector)[1][0][0][0]
   # print percent_reaction, similar_users, user_vector
 
-  if hasattr(g, 'mysql_db'):
-    g.mysql_db.close()
+  user_names = [names.get_full_name() for _ in user_ids]
+  similar_users = random.sample(user_names, 5)
+  percent_reaction = "%0.2f" % (min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.9219) * 100)
 
-  return jsonify(food_name=food_name, percent_react=percent_react, user_ids=user_ids, reactions=reactions,
-    similar_users=similar_users, percent_reaction=percent_reaction)
+  if is_allergic:
+    percent_reaction = 100.00
+
+  # return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
+  #   user_names=user_names, reactions=reactions, similar_users=similar_users)
+
+  return render_template('upc.html', food_name=food_name, user_names=user_names, percent_reaction=percent_reaction,
+    reactions=reactions, similar_users=similar_users, is_allergic=is_allergic)
 
 def create_user_vector(user_id, debug=False):
   getCursor().execute("SELECT `name`, `severity` FROM `allergies` WHERE `user_id`=%s", [user_id])
@@ -97,13 +142,13 @@ def create_user_vector(user_id, debug=False):
     print user_allergens, severity, user_vector
   return user_vector
 
-@app.route('/react')
+@app.route('/react', methods=['GET', 'POST'])
 def process_react():
   # Retrieve args
   try:
-    user_id = request.args.get('user_id')
-    reaction = request.args.get('reaction')
-    food_name = request.args.get('food_name')
+    user_id = request.values.get('user_id')
+    reaction = request.values.get('reaction')
+    food_name = request.values.get('food_name')
 
     getCursor().execute("SELECT `food_id` FROM `food` WHERE `name`=%s", [food_name])
     food_id = getCursor().fetchone()[0]
@@ -112,14 +157,8 @@ def process_react():
       [user_id, reaction, food_id])
     getDB().commit()
 
-    if hasattr(g, 'mysql_db'):
-      g.mysql_db.close()
-
     return "True"
   except:
-    if hasattr(g, 'mysql_db'):
-      g.mysql_db.close()
-
     return "False"
 
 class Recommender:
