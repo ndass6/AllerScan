@@ -81,7 +81,7 @@ def process_upc():
     food_allergens[i] = food_allergens[i][0].encode('utf-8').lower()
   print food_allergens
 
-  is_allergic = str(not set(user_allergens).isdisjoint(food_allergens))
+  is_allergic = not set(user_allergens).isdisjoint(food_allergens)
 
 
   # # Train the recommender
@@ -117,6 +117,8 @@ def process_upc():
 
   if is_allergic:
     percent_reaction = 100.00
+
+  print is_allergic
 
   # return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
   #   user_names=user_names, reactions=reactions, similar_users=similar_users)
