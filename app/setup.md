@@ -16,7 +16,7 @@ If you're using a Mac, you'll need to use the following code:
 Now, enter the following code to run the flask app:
 
 
-    $ set FLASK_APP=main.py
+    $ set FLASK_APP=run_dev.py
     $ flask run
         * Running on http://127.0.0.1:5000/
 

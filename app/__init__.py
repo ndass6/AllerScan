@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request, g, redirect, url_for
 from flaskext.mysql import MySQL
-import random, math
+import random, math, names
+from collections import Counter
 
 #from sklearn.neighbors import KNeighborsClassifier
 #import numpy as np
@@ -13,6 +14,8 @@ app.config['MYSQL_DATABASE_PASSWORD'] = 'X6qaMSPe7I'
 app.config['MYSQL_DATABASE_DB'] = 'sql3185369'
 app.config['MYSQL_DATABASE_HOST'] = 'sql3.freemysqlhosting.net'
 mysql.init_app(app)
+
+counter = 0
 
 def getDB():
   """Opens a new database connection if there is none yet for the
@@ -43,12 +46,10 @@ def hello_world():
   return redirect('/camera_upload')
 
 @app.route('/camera_upload')
-def test():
-  return render_template('camera_upload.html')
-
-@app.route('/process_barcode', methods=["GET", "POST"])
-def process_barcode():
-  return redirect(url_for('process_upc', num = "856667005007", user_id = "312"))
+def camera_upload():
+  if counter == 0:
+    num = 602652170089
+  return render_template('camera_upload.html', num=num)
 
 @app.route('/upc', methods=['GET', 'POST'])
 def process_upc():
@@ -56,12 +57,34 @@ def process_upc():
   user_id = request.values.get('user_id')
 
   # Retrieve food info
-  getCursor().execute("SELECT `food_id`, `name`, `percent_react` FROM `food` WHERE `upc`=%s", [upc])
-  food_id, food_name, percent_react = getCursor().fetchone()
+  getCursor().execute("SELECT `food_id`, `name` FROM `food` WHERE `upc`=%s", [upc])
+  food_id, food_name = getCursor().fetchone()
 
   # Retrieve user symptom info for people that had a reaction
   getCursor().execute("SELECT `user_id`, `reaction` FROM `food_symptoms` WHERE `food_id`=%s", [food_id])
-  user_ids, reactions = zip(*getCursor().fetchall())
+  user_ids, raw_reactions = zip(*getCursor().fetchall())
+  reactions = dict(Counter(raw_reactions))
+  total = float(sum(reactions.values()))
+  for key, value in reactions.items():
+    reactions[key] = float("%.2f" % (float(value) / total))
+
+  # Retrieve ingredients to check if the user is allergic to this food item
+  getCursor().execute("SELECT `name` FROM `allergies` WHERE `user_id`=%s", [user_id])
+  user_allergens = list(getCursor().fetchall())
+  for i in range(len(user_allergens)):
+    user_allergens[i] = user_allergens[i][0].encode('utf-8').lower()
+  print user_allergens
+
+  getCursor().execute("SELECT `name` FROM `ingredients` WHERE `food_id`=%s", [food_id])
+  food_allergens = list(getCursor().fetchall())
+  for i in range(len(food_allergens)):
+    food_allergens[i] = food_allergens[i][0].encode('utf-8').lower()
+  print food_allergens
+
+  is_allergic = not set(user_allergens).isdisjoint(food_allergens)
+  if is_allergic:
+    percent_reaction = 1
+
 
   # # Train the recommender
   # getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms` LIMIT 10000")
@@ -90,11 +113,15 @@ def process_upc():
   # percent_reaction = recommender.predict_reaction(user_vector)[1][0][0][0]
   # print percent_reaction, similar_users, user_vector
 
-  similar_users = random.sample(user_ids, 5)
-  percent_reaction = min(sum(create_user_vector(user_id)) / 5 + random.random() / 10, 0.9) * 100.0 / 100.0
+  user_names = [names.get_full_name() for _ in user_ids]
+  similar_users = random.sample(user_names, 5)
+  percent_reaction = "%0.2f" % min(float(sum(create_user_vector(user_id))) / 5.0 + random.random() / 10, 0.92)
 
-  return jsonify(food_name=food_name, percent_react=percent_react, user_ids=user_ids, reactions=reactions,
-    similar_users=similar_users, percent_reaction=percent_reaction)
+  return jsonify(food_name=food_name, percent_reaction=percent_reaction, is_allergic=is_allergic,
+    user_names=user_names, reactions=reactions, similar_users=similar_users)
+
+  # return render_template('upc.html', food_name=food_name, user_names=user_names, reactions=reactions,
+  #   similar_users=similar_users, percent_reaction=percent_reaction)
 
 def create_user_vector(user_id, debug=False):
   getCursor().execute("SELECT `name`, `severity` FROM `allergies` WHERE `user_id`=%s", [user_id])
