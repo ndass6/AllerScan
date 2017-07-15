@@ -47,10 +47,6 @@ def hello_world():
 def test():
   return render_template('camera_upload.html')
 
-@app.route('/process_barcode', methods=["GET", "POST"])
-def process_barcode():
-  return redirect(url_for('process_upc', num = "856667005007", user_id = "312"))
-
 @app.route('/upc', methods=['GET', 'POST'])
 def process_upc():
   upc = request.values.get('num')
