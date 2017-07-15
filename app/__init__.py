@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request, g, redirect, url_for
 from flaskext.mysql import MySQL
-import random, math
+import random, math, names
+from collections import Counter
 
 #from sklearn.neighbors import KNeighborsClassifier
 #import numpy as np
@@ -61,7 +62,13 @@ def process_upc():
 
   # Retrieve user symptom info for people that had a reaction
   getCursor().execute("SELECT `user_id`, `reaction` FROM `food_symptoms` WHERE `food_id`=%s", [food_id])
-  user_ids, reactions = zip(*getCursor().fetchall())
+  user_ids, raw_reactions = zip(*getCursor().fetchall())
+  reactions = dict(Counter(raw_reactions))
+  total = float(sum(reactions.values()))
+  for key, value in reactions.items():
+    reactions[key] = float(value) / total
+  print reactions, sum(reactions.values())
+
 
   # # Train the recommender
   # getCursor().execute("SELECT `food_id`, `user_id`, `reaction` FROM `food_symptoms` LIMIT 10000")
@@ -90,10 +97,11 @@ def process_upc():
   # percent_reaction = recommender.predict_reaction(user_vector)[1][0][0][0]
   # print percent_reaction, similar_users, user_vector
 
-  similar_users = random.sample(user_ids, 5)
+  user_names = [names.get_full_name() for _ in user_ids]
+  similar_users = random.sample(user_names, 5)
   percent_reaction = min(sum(create_user_vector(user_id)) / 5 + random.random() / 10, 0.9) * 100.0 / 100.0
 
-  return jsonify(food_name=food_name, percent_react=percent_react, user_ids=user_ids, reactions=reactions,
+  return jsonify(food_name=food_name, percent_react=percent_react, user_names=user_names, reactions=reactions,
     similar_users=similar_users, percent_reaction=percent_reaction)
 
 def create_user_vector(user_id, debug=False):
