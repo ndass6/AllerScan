@@ -26,12 +26,6 @@ Now, just head over to [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to view 
 
 ## Databases
 
-Database Information
-
-PythonAnywhere Info:
-* ndass@gmail.com
-* MUCproject123
-
 Development Database Info [phpmyadmin.co](phpmyadmin.co):
 * Server/Host: sql3.freemysqlhosting.net
 * Name: sql3185369
