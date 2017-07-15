@@ -79,7 +79,7 @@
         <div class="text-center container">
         	<img src="https://scontent.xx.fbcdn.net/v/t34.0-0/p280x280/20067860_1488494354505838_1784923902_n.png?_nc_ad=z-m&oh=f3f91a469654519122eda6ed9646f998&oe=596C1F8E" class="img-responsive center-block" />
             <div class="row">
-                <form action="process_barcode" method="POST" enctype="multipart/form-data" id="upload-form">
+                <form action="{{url_for('process_upc', num=num,user_id="149")}}" method="POST" enctype="multipart/form-data" id="upload-form">
 				    <div class="upload-btn-wrapper">
 					  <button style="margin-top:50px;" type="submit" class="btn" name="Send" id="Send">Scan Barcode</button>
 					  <input type="file" name="imagefile" id="imagefile"/>
@@ -88,6 +88,12 @@
             </div>
         </div>
     </section>
+
+    <script type="text/javascript">
+        document.getElementById("imagefile").onchange = function() {
+            document.getElementById("upload-form").submit();
+        };
+    </script>
 
     <!-- jQuery -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
